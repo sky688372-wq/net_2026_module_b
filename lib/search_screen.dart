@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:net_2026/detail_screen.dart';
+import 'package:net_2026/module_b/notification_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // API 반환 데이터 모델
 class AlbumModel {
@@ -109,6 +111,12 @@ class _SearchScreenState extends State<SearchScreen> {
     fetchProducts();
   }
 
+  // 로컬 저장소에서 토큰 가져오는 함수
+  Future<String> _getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token') ?? '';
+  }
+
   // API 통신 및 검색 처리 함수
   Future<void> fetchProducts() async {
     setState(() {
@@ -116,6 +124,8 @@ class _SearchScreenState extends State<SearchScreen> {
     });
 
     try {
+      final token = await _getToken();
+
       // 선택된 조건 추출
       String genreKey = genreList[genreState.indexOf(true)];
       String conditionKey = albums[albumConditions.indexOf(true)];
@@ -125,7 +135,7 @@ class _SearchScreenState extends State<SearchScreen> {
       Map<String, String> queryParams = {
         'sort': sortApiMap[_selectedSort] ?? 'recent',
         'page': '1',
-        'size': '20',
+        'size': '50', // 관심상품 및 연동을 위해 한 번에 가져오는 항목 수 증대
       };
 
       // 검색어 추가
@@ -144,13 +154,13 @@ class _SearchScreenState extends State<SearchScreen> {
       queryParams['minPrice'] = _priceRange.start.toInt().toString();
       queryParams['maxPrice'] = _priceRange.end.toInt().toString();
 
-      // baseUrl이 이미 /products 경로를 포함하고 있으므로 직접 사용
       final uri = Uri.parse(baseUrl).replace(queryParameters: queryParams);
 
       final response = await http.get(
         uri,
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 15));
 
@@ -169,9 +179,11 @@ class _SearchScreenState extends State<SearchScreen> {
     } catch (e) {
       debugPrint("API 연동 에러 발생: $e");
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -244,10 +256,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   IconButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        
-                        SnackBar(content: Text('현재 해당 기능은 준비중입니다.')) //여기 나중에 모뮬 B에서 바꾼다.
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationScreen())
                       );
                     },
                     icon: const Icon(Icons.notifications, color: Colors.white),
@@ -278,7 +287,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       onPressed: () {
                         ScaffoldMessenger.of(context).clearSnackBars();
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("현재 해당 기능은 준비중입니다."))
+                            const SnackBar(content: Text("현재 해당 기능은 준비중입니다."))
                         );
                       },
                       icon: Icon(Symbols.barcode_scanner, color: Colors.white.withValues(alpha: 0.5)),
@@ -356,11 +365,9 @@ class _SearchScreenState extends State<SearchScreen> {
                                         onChangeEnd: (values) => fetchProducts(),
                                         onChanged: (RangeValues values) {
                                           setState(() {
-                                            // 1. start, end가 min(1000) ~ max(1000000) 범위를 절대 넘지 않도록 제한
                                             double safeStart = values.start.clamp(1000.0, 1000000.0);
                                             double safeEnd = values.end.clamp(1000.0, 1000000.0);
 
-                                            // 2. start가 end보다 크지 않도록 보장
                                             if (safeStart > safeEnd) {
                                               safeStart = safeEnd;
                                             }
@@ -406,13 +413,13 @@ class _SearchScreenState extends State<SearchScreen> {
 
               Container(
                 decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 10,
-                      spreadRadius: 0.7,
-                    )
-                  ]
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        spreadRadius: 0.7,
+                      )
+                    ]
                 ),
 
                 child: Divider(

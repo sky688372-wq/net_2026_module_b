@@ -41,6 +41,7 @@ dependencies:
   easy_animated_indexed_stack: ^0.1.0
   intl: ^0.20.3
   material_symbols_icons: ^4.2960.0
+  smooth_page_indicator: ^2.0.1
 
 dev_dependencies:
   flutter_test:
