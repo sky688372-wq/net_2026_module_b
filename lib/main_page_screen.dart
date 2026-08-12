@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:net_2026/detail_screen.dart';
+import 'package:net_2026/module_b/my_page_screen.dart';
 import 'package:net_2026/module_b/notification_screen.dart';
 import 'package:net_2026/module_b/wishlist_screen.dart';
 import 'package:net_2026/search_screen.dart';
@@ -21,12 +22,13 @@ class MainPageScreen extends StatefulWidget {
 class _MainPageScreenState extends State<MainPageScreen>
     with SingleTickerProviderStateMixin {
 
-  //좋아요 동기화처리함
-
-  //로컬에 있는 정보들을 담을 변수 : 좋아하는 곡들의 ID를 문자열로 담음
+  // 로컬에 있는 정보들을 담을 변수 : 좋아하는 곡들의 ID를 문자열로 담음
   List<String> favoriteAlbum = [];
 
-  //로컬에 있는 정보를 가져오는 함수
+  // 선택된 장르 저장 변수 (null이면 전체)
+  String? _selectedGenre;
+
+  // 로컬에 있는 정보를 가져오는 함수
   Future<void> getFavoriteAlbum() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final localData = prefs.getStringList('favorite_ids') ?? []; // null일 경우 빈 배열 반환
@@ -37,7 +39,7 @@ class _MainPageScreenState extends State<MainPageScreen>
     print("[확인용]현재 로컬에 있는 데이터는 $favoriteAlbum");
   }
 
-  //좋아요한 아이디를 비교해서 최종적으로 favoriteAlbum에 담고 저장하는 함수
+  // 좋아요한 아이디를 비교해서 최종적으로 favoriteAlbum에 담고 저장하는 함수
   Future<void> toggleFavorite(int id) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String strId = id.toString(); // ID를 문자열로 변환
@@ -87,7 +89,6 @@ class _MainPageScreenState extends State<MainPageScreen>
 
   String _token = ""; // 토큰 변수
 
-
   final String baseUrl = "https://connexChat-server.onrender.com/vinyl";
   int unreadCount = 0; //이 값으로 알람 배지의 숫자를 표시할거임
 
@@ -107,7 +108,6 @@ class _MainPageScreenState extends State<MainPageScreen>
       if (response.statusCode == 200) {
         final parsedData = jsonDecode(utf8.decode(response.bodyBytes));
 
-
         if (parsedData['success'] == true) {
           if (mounted) {
             setState(() {
@@ -122,7 +122,6 @@ class _MainPageScreenState extends State<MainPageScreen>
       debugPrint("알림 통신 오류, $e");
     }
   }
-
 
   // 로컬 토큰 가져오기
   Future<void> fetchToken() async {
@@ -194,15 +193,13 @@ class _MainPageScreenState extends State<MainPageScreen>
     return list.take(10).toList();
   }
 
-  //화면이 생성되면 시작될 부분
+  // 화면이 생성되면 시작될 부분
   @override
   void initState() {
     super.initState();
     fetchNotifications();
 
-    //1. 애니메이션 관련
-
-    // 3초에 1바퀴씩 무한 회전하는 애니메이션 컨트롤러 초기화
+    // 1. 애니메이션 관련
     _rotationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -288,7 +285,6 @@ class _MainPageScreenState extends State<MainPageScreen>
                           ),
                         ),
                       ),
-
                     ],
                   ),
 
@@ -308,9 +304,7 @@ class _MainPageScreenState extends State<MainPageScreen>
                           borderSide: const BorderSide(color: Colors.white),
                         ),
                         prefixIcon: IconButton(
-                          onPressed: () {
-                            //현재까지 이 검색 부분을 구현하라는 말은 없음
-                          },
+                          onPressed: () {},
                           icon: Icon(
                             Icons.search,
                             color: Colors.white.withValues(alpha: 0.5),
@@ -671,6 +665,7 @@ class _MainPageScreenState extends State<MainPageScreen>
                         TextButton(
                           onPressed: () {
                             setState(() {
+                              _selectedGenre = '전체';
                               _currentIndex = 1;
                             });
                           },
@@ -752,6 +747,7 @@ class _MainPageScreenState extends State<MainPageScreen>
                         child: GestureDetector(
                           onTap: () {
                             setState(() {
+                              _selectedGenre = '전체';
                               _currentIndex = 1;
                             });
                           },
@@ -806,8 +802,11 @@ class _MainPageScreenState extends State<MainPageScreen>
             ),
           ),
 
-          // 2. 검색 화면 (현재 탭 인덱스를 전달)
-          SearchScreen(tabIndex: _currentIndex),
+          // 2. 검색 화면 (현재 탭 인덱스 및 선택된 장르 전달)
+          SearchScreen(
+            tabIndex: _currentIndex,
+            selectedGenre: _selectedGenre,
+          ),
 
           // 3. 더보기/진행
           const Center(
@@ -825,16 +824,7 @@ class _MainPageScreenState extends State<MainPageScreen>
           WishlistScreen(key: ValueKey(_currentIndex)),
 
           // 5. 마이페이지
-          const Center(
-            child: Text(
-              "마이페이지",
-              style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
+          const MyPageScreen()
         ],
       ),
       bottomNavigationBar: Container(
@@ -849,8 +839,6 @@ class _MainPageScreenState extends State<MainPageScreen>
             setState(() {
               _currentIndex = value;
             });
-            //탭을 이동할 때마다 좋아요 토글 버튼의 상태를 일치시키기 위해서 setState
-
             getFavoriteAlbum();
           },
           items: const [
@@ -879,7 +867,6 @@ class _MainPageScreenState extends State<MainPageScreen>
 
   // 상품 카드 렌더링
   Widget _buildProductCard(Map<String, dynamic> item) {
-    // 1. 현재 상품이 찜 목록에 있는지 확인
     bool isFavorite = favoriteAlbum.contains(item['id'].toString());
 
     String formatPrice(dynamic price) {
@@ -896,7 +883,6 @@ class _MainPageScreenState extends State<MainPageScreen>
           context,
           MaterialPageRoute(builder: (context) => DetailScreen(id: item['id'])),
         ).then((_) {
-          // 상세 화면에서 돌아왔을 때 찜 상태 갱신을 위해 데이터 재호출
           getFavoriteAlbum();
         });
       },
@@ -930,17 +916,13 @@ class _MainPageScreenState extends State<MainPageScreen>
                   Positioned(
                     top: 10,
                     right: 10,
-
                     child: GestureDetector(
                       onTap: () {
-                        // 누르면 처리할 로직 : 토글 함수 호출
                         toggleFavorite(item['id']);
                       },
-
                       child: CircleAvatar(
                           backgroundColor: const Color(0xFF131313),
                           child: Icon(
-                            // 상태에 따라 아이콘 모양 및 색상 변경
                             isFavorite ? Icons.favorite : Icons.favorite_border,
                             color: isFavorite ? Colors.red : Colors.white,
                           )
@@ -1006,7 +988,6 @@ class _MainPageScreenState extends State<MainPageScreen>
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-
                 ],
               ),
             ),
@@ -1020,7 +1001,13 @@ class _MainPageScreenState extends State<MainPageScreen>
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
       child: GestureDetector(
-        onTap: () {},
+        onTap: () {
+          // 장르 카드 클릭 시 해당 장르 지정 후 검색 탭으로 이동
+          setState(() {
+            _selectedGenre = text;
+            _currentIndex = 1;
+          });
+        },
         child: Container(
           width: 85,
           height: 55,

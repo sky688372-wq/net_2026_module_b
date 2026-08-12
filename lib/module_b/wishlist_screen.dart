@@ -57,7 +57,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
       isLoading = true;
     });
 
-    // 💡 핵심 수정: 기본 10~20개만 주는 서버라면 뒤에 있는 앨범을 못 가져오므로 size=100 추가
     final url = "https://connexChat-server.onrender.com/vinyl/products?size=100";
     await _fetchToken();
 
@@ -69,7 +68,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
       if (!mounted) return;
 
-      // 💡 디버깅 2: 서버 연결 상태 확인
+      // 2: 서버 연결 상태 확인
       print("2. 서버 응답 코드: ${response.statusCode}");
 
       if (response.statusCode == 200) {
@@ -77,23 +76,23 @@ class _WishlistScreenState extends State<WishlistScreen> {
         final parsedJson = jsonDecode(utf8.decode(response.bodyBytes));
         final List<dynamic> allProducts = parsedJson['data'] ?? [];
 
-        // 💡 디버깅 3: 서버에서 가져온 전체 상품 개수와 실제 ID 확인
+        // 3: 서버에서 가져온 전체 상품 개수와 실제 ID 확인
         print("3. 서버에서 불러온 전체 상품 개수: ${allProducts.length}");
         if (allProducts.isNotEmpty) {
           List<String> serverProductIds = allProducts.map((e) => e['id'].toString()).toList();
           print("4. 서버에서 넘어온 상품들의 ID 리스트: $serverProductIds");
         }
 
-        // [핵심] 로컬에 저장된 ID 목록 가져오기
+        // 로컬에 저장된 ID 목록 가져오기
         final List<String> favoriteIds = await getFavorite();
 
-        // [핵심] 전체 상품 중 저장된 ID를 포함하는 상품만 필터링
+        // 전체 상품 중 저장된 ID를 포함하는 상품만 필터링
         final List<dynamic> likedProducts = allProducts.where((item) {
           // item['id']가 int로 들어오더라도 강제로 String으로 변환 후 비교
           return favoriteIds.contains(item['id'].toString());
         }).toList();
 
-        // 💡 디버깅 4: 최종 필터링된 결과물 개수 확인
+        // 4: 최종 필터링된 결과물 개수 확인
         print("5. 최종적으로 화면에 그릴 찜 상품 개수: ${likedProducts.length}");
         print("=======================================");
 

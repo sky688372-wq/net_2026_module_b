@@ -15,6 +15,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
 
+
+  //이메일, 이름을 저장히는 함수 -> 나중에 마이페이지 표시할 때 쓸 예정임
+  Future<void> setLaterData() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('email', _emailCtrl.text);
+    prefs.setString('name', _passwordCtrl.text);
+  }
+
   bool _isPasswordHidden = true; // 기본적으로 가림 처리
 
   // 텍스트 필드 컨트롤러
@@ -96,6 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
           return;
         }
 
+        setLaterData();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainPageScreen()),

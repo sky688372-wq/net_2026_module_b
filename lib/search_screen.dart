@@ -47,17 +47,20 @@ class AlbumModel {
 
 class SearchScreen extends StatefulWidget {
   final int tabIndex;
+  final String? selectedGenre; // 선택된 장르 전달용 필드
 
-  const SearchScreen({super.key, this.tabIndex = 0});
+  const SearchScreen({
+    super.key,
+    this.tabIndex = 0,
+    this.selectedGenre,
+  });
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
-// 1. RouteAware 믹스인 추가: 화면 전환(Back 버튼 등) 감지를 위함
+// RouteAware 믹스인 추가: 화면 전환 감지를 위함
 class _SearchScreenState extends State<SearchScreen> with RouteAware {
-  //좋아요 동기화처리 완료
-
   final String baseUrl = "https://connexChat-server.onrender.com/vinyl/products";
 
   final TextEditingController _ctrl = TextEditingController();
@@ -114,6 +117,50 @@ class _SearchScreenState extends State<SearchScreen> with RouteAware {
   };
   List<bool> genreState = List.generate(9, (i) => i == 0);
 
+  // 외부 전달 장르 텍스트와 내부에 정의된 genreList 매핑 함수
+  void _applySelectedGenre(String? genre) {
+    if (genre == null || genre.isEmpty) return;
+
+    int targetIndex = 0; // 기본 전체
+    switch (genre) {
+      case 'Rock':
+        targetIndex = genreList.indexOf('Rock');
+        break;
+      case 'Jazz':
+        targetIndex = genreList.indexOf('Jazz');
+        break;
+      case 'Pop':
+        targetIndex = genreList.indexOf('Pop');
+        break;
+      case 'Hip-hop':
+      case 'Hip-Hop':
+        targetIndex = genreList.indexOf('Hip-Hop');
+        break;
+      case 'Electronic':
+        targetIndex = genreList.indexOf('Electronic');
+        break;
+      case 'Classical':
+        targetIndex = genreList.indexOf('Classical');
+        break;
+      case 'R&B-Soul':
+      case 'RnB/Soul':
+        targetIndex = genreList.indexOf('RnB/Soul');
+        break;
+      case '기타':
+      case 'Etc':
+        targetIndex = genreList.indexOf('Etc');
+        break;
+      default:
+        targetIndex = 0;
+    }
+
+    if (targetIndex != -1) {
+      for (int i = 0; i < genreState.length; i++) {
+        genreState[i] = (i == targetIndex);
+      }
+    }
+  }
+
   // 음반 상태 데이터 및 매핑
   final List<String> albums = ['전체', 'Mint', 'NM', 'VG+', 'VG', 'G'];
   final Map<String, String> conditionApiMap = {
@@ -144,13 +191,13 @@ class _SearchScreenState extends State<SearchScreen> with RouteAware {
   void initState() {
     super.initState();
     getFavoriteAlbum();
+    _applySelectedGenre(widget.selectedGenre);
     fetchProducts();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // 2. RouteObserver에 현재 화면 등록
     final route = ModalRoute.of(context);
     if (route is PageRoute) {
       routeObserver.subscribe(this, route);
@@ -159,13 +206,11 @@ class _SearchScreenState extends State<SearchScreen> with RouteAware {
 
   @override
   void dispose() {
-    // 3. RouteObserver 등록 해제 (메모리 누수 방지)
     routeObserver.unsubscribe(this);
     _ctrl.dispose();
     super.dispose();
   }
 
-  // 4. 다른 화면에서 이 화면으로 돌아올 때 호출 (Navigator.pop 등)
   @override
   void didPopNext() {
     debugPrint("SearchScreen: didPopNext triggered. Refreshing favorites.");
@@ -175,17 +220,20 @@ class _SearchScreenState extends State<SearchScreen> with RouteAware {
   @override
   void didUpdateWidget(covariant SearchScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
-    // 5. 탭 전환 감지 (IndexedStack 환경)
+
+    // 전달받은 장르 파라미터 변경 감지
+    if (widget.selectedGenre != oldWidget.selectedGenre) {
+      _applySelectedGenre(widget.selectedGenre);
+      fetchProducts();
+    }
+
+    // 탭 전환 감지 (IndexedStack 환경)
     if (oldWidget.tabIndex != widget.tabIndex) {
-      // 탭이 Search(1)로 변경되었을 때 로컬 데이터 최신화
       if (widget.tabIndex == 1) {
         getFavoriteAlbum();
       }
-      // 탭 변경 시 데이터 재요청 (검색 조건 유지 목적 등)
       fetchProducts();
     } else {
-      // 상위 위젯(MainPage)의 일반적인 리빌드 시에도 상태 동기화 유지
       getFavoriteAlbum();
     }
   }
@@ -325,7 +373,6 @@ class _SearchScreenState extends State<SearchScreen> with RouteAware {
                   ),
                   IconButton(
                     onPressed: () {
-                      // 6. 알림 화면 이동 후 돌아올 때 동기화 (.then 추가)
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationScreen()))
                           .then((_) => getFavoriteAlbum());
                     },
@@ -546,7 +593,6 @@ class _SearchScreenState extends State<SearchScreen> with RouteAware {
 
                   return GestureDetector(
                     onTap: () {
-                      // 7. 상세 화면 이동 후 돌아올 때 동기화 (.then 추가)
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => DetailScreen(id: album.id)),
