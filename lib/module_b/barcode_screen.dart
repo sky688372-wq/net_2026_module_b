@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:net_2026/detail_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // 네이티브 채널
 const _channel = MethodChannel('vinyl/barcode');
@@ -72,28 +74,69 @@ class _BarcodeScreenState extends State<BarcodeScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  // ── 바코드 검색 (API 연동) ──
+  // ── 바코드 검색 및 상품 상세 화면 이동 ──
   Future<void> _search(String barcode) async {
     if (_handled) return;
     _handled = true;
 
     try {
-      // API 예시 주소 (실제 호스트 및 경로로 변경 가능)
-      final response = await http.get(
-        Uri.parse('http://api.vinylgroove.com/products?keyword=$barcode'),
-      );
-      final data = jsonDecode(response.body);
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? "";
 
-      if (data['success'] != true) {
-        _toast('바코드 "$barcode"에 해당하는 상품을 찾을 수 없습니다');
-        _handled = false;
-        return;
-      }
+      // 1. 서버의 전체 상품 목록 조회
+      final response = await http.get(
+        Uri.parse('https://connexChat-server.onrender.com/vinyl/products'),
+        headers: {
+          "Content-Type": "application/json",
+          if (token.isNotEmpty) "Authorization": "Bearer $token",
+        },
+      );
 
       if (!mounted) return;
 
-      // 검색 결과 성공 시 이전 화면으로 결과값 전송 또는 다음 화면 이동
-      Navigator.pop(context, barcode);
+      int? productId;
+
+      if (response.statusCode == 200) {
+        final parsedJson = jsonDecode(response.body);
+        final rawData = parsedJson['data'];
+
+        if (rawData is List) {
+          // 2. 바코드 번호(barcode)가 일치하는 상품의 고유 ID 추출
+          final matchedProduct = rawData.firstWhere(
+                (item) => item['barcode']?.toString() == barcode,
+            orElse: () => null,
+          );
+
+          if (matchedProduct != null) {
+            productId = matchedProduct['id'];
+          }
+        }
+      }
+
+      if (productId != null) {
+        // 전달되는 상품 ID 및 바코드 번호를 스낵바로 표시
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '스캔 성공! [바코드: $barcode] -> [전달된 상품 ID: $productId]',
+              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: const Color(0xFFDFAC42),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
+        // DetailScreen으로 이동
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailScreen(id: productId!),
+          ),
+        );
+      } else {
+        _toast('바코드 "$barcode"에 해당하는 등록된 상품이 없습니다.');
+        _handled = false;
+      }
     } catch (e) {
       _toast('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
       _handled = false;
@@ -148,7 +191,7 @@ class _BarcodeScreenState extends State<BarcodeScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 카메라 프리뷰 (네이티브 CameraX)
+          // 카메라 프리뷰 (네이티브 CameraView)
           if (_granted) const Positioned.fill(child: NativeCameraView()),
 
           // 스캔 영역 외 반투명 오버레이
@@ -169,7 +212,7 @@ class _BarcodeScreenState extends State<BarcodeScreen> {
                     child: Container(
                       height: 2,
                       margin: const EdgeInsets.symmetric(horizontal: 8),
-                      color: const Color(0xFFE8B04B).withValues(alpha: 0.6),
+                      color: const Color(0xFFE8B04B).withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -229,9 +272,9 @@ class _BarcodeScreenState extends State<BarcodeScreen> {
     );
   }
 
-  // 스캔 구역 외 반투명 배경 (4개 영역)
+  // 스캔 구역 외 반투명 배경
   Widget _buildDarkOverlay(double scanW, double scanH) {
-    final overlay = Colors.black.withValues(alpha: 0.55);
+    final overlay = Colors.black.withOpacity(0.55);
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;

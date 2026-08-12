@@ -837,7 +837,7 @@ class _MainPageScreenState extends State<MainPageScreen>
             BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
             BottomNavigationBarItem(
               icon: Icon(Icons.search_rounded),
-              label: "검색",
+              label: "탐색",
             ),
             BottomNavigationBarItem(
               icon: CircleAvatar(
