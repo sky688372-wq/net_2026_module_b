@@ -62,6 +62,35 @@ class _SearchScreenState extends State<SearchScreen> {
   List<AlbumModel> _filteredList = [];
   int _totalCount = 0;
 
+  // 로컬 좋아요 데이터 관리를 위한 변수 및 함수
+  List<String> favoriteAlbum = [];
+
+  Future<void> getFavoriteAlbum() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final localData = prefs.getStringList('favorite_ids') ?? [];
+    if (mounted) {
+      setState(() {
+        favoriteAlbum = localData;
+      });
+    }
+  }
+
+  Future<void> toggleFavorite(int id) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String strId = id.toString();
+
+    setState(() {
+      if (favoriteAlbum.contains(strId)) {
+        favoriteAlbum.remove(strId);
+      } else {
+        favoriteAlbum.add(strId);
+      }
+    });
+
+    await prefs.setStringList('favorite_ids', favoriteAlbum);
+  }
+  // ----------------------------------------------------
+
   // 장르 데이터 및 매핑
   final List<String> genreList = [
     '전체', 'Rock', 'Jazz', 'Pop', 'Hip-Hop', 'Electronic', 'Classical', 'RnB/Soul', 'Etc'
@@ -108,6 +137,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
+    getFavoriteAlbum(); // 초기화 시 좋아요 데이터 불러오기
     fetchProducts();
   }
 
@@ -473,11 +503,19 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 itemBuilder: (context, index) {
                   final album = _filteredList[index];
+                  // 좋아요 여부 체크 확인
+                  bool isFavorite = favoriteAlbum.contains(album.id.toString());
+
                   return GestureDetector(
                     onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => DetailScreen(id: album.id)));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => DetailScreen(id: album.id)),
+                      ).then((_) {
+                        // 뒤로가기로 돌아왔을 때 상태 반영을 위해 재호출
+                        getFavoriteAlbum();
+                      });
                     },
-
                     child: Container(
                       decoration: BoxDecoration(color: const Color(0xFF212121), borderRadius: BorderRadius.circular(12)),
                       clipBehavior: Clip.antiAlias,
@@ -503,8 +541,29 @@ class _SearchScreenState extends State<SearchScreen> {
                                   child: Text(album.condition, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                                 ),
                               ),
+                              // 구조 개선: 하트 아이콘 Positioned를 Stack 내부로 이동
+                              Positioned(
+                                top: 6,
+                                right: 6,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    // 좋아요 토글
+                                    toggleFavorite(album.id);
+                                  },
+                                  child: CircleAvatar(
+                                    backgroundColor: const Color(0xFF131313).withValues(alpha: 0.6),
+                                    radius: 14,
+                                    child: Icon(
+                                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                                      color: isFavorite ? Colors.red : Colors.white,
+                                      size: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
+
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Column(

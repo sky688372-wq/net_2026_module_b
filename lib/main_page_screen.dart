@@ -770,7 +770,7 @@ class _MainPageScreenState extends State<MainPageScreen>
           ),
 
           // 4. 관심상품
-          const WishlistScreen(),
+          WishlistScreen(key: ValueKey(_currentIndex)),
 
           // 5. 마이페이지
           const Center(
@@ -797,6 +797,8 @@ class _MainPageScreenState extends State<MainPageScreen>
             setState(() {
               _currentIndex = value;
             });
+            //탭을 이동할 때마다 좋아요 토글 버튼의 상태를 일치시키기 위해서 setState
+            getFavoriteAlbum();
           },
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
