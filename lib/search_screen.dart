@@ -56,6 +56,8 @@ class SearchScreen extends StatefulWidget {
 
 // 1. RouteAware 믹스인 추가: 화면 전환(Back 버튼 등) 감지를 위함
 class _SearchScreenState extends State<SearchScreen> with RouteAware {
+  //좋아요 동기화처리 완료
+
   final String baseUrl = "https://connexChat-server.onrender.com/vinyl/products";
 
   final TextEditingController _ctrl = TextEditingController();

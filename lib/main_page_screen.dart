@@ -21,6 +21,8 @@ class MainPageScreen extends StatefulWidget {
 class _MainPageScreenState extends State<MainPageScreen>
     with SingleTickerProviderStateMixin {
 
+  //좋아요 동기화처리함
+
   //로컬에 있는 정보들을 담을 변수 : 좋아하는 곡들의 ID를 문자열로 담음
   List<String> favoriteAlbum = [];
 
