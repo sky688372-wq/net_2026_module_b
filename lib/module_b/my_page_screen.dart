@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:net_2026/login_screen.dart';
+import 'package:net_2026/module_b/add_product_screen.dart';
+import 'package:net_2026/module_b/notification_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -12,6 +14,36 @@ class MyPageScreen extends StatefulWidget {
 }
 
 class _MyPageScreenState extends State<MyPageScreen> {
+
+  //화면을 누른 것에 맞게 이동시켜주는 함수
+  void nextPage(int index) {
+    switch (index) {
+      case 0: //알림 화면 이동
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const NotificationScreen()),
+        );
+        break;
+      case 1: //내 등록 상품 이동 페이지
+        Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => AddProductScreen())
+        );
+        break;
+      case 2:
+        //판매 내역 페이지 이동
+        break;
+      case 3:
+        //구매 내역 페이지 이동
+        break;
+      case 4:
+        //고객센터 페이지 이동
+        break;
+      case 5:
+        //앱 정보 페이지 이동
+
+    }
+  }
 
   List<Map<String, dynamic>> settingComponent = [
     {'icon': Icons.add, 'title': '알림'},
@@ -71,7 +103,8 @@ class _MyPageScreenState extends State<MyPageScreen> {
               Align(
                 alignment: Alignment.topLeft,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                   child: Text(
                     '마이페이지',
                     style: GoogleFonts.notoSansKr(
@@ -85,14 +118,16 @@ class _MyPageScreenState extends State<MyPageScreen> {
 
               // 2. 프로필 정보 표시 카드
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 20),
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     color: const Color(0xFF1E1E1E),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 16),
                     child: Row(
                       children: [
                         // 프로필 아바타
@@ -143,14 +178,16 @@ class _MyPageScreenState extends State<MyPageScreen> {
               //설정 컴포넌트 요소들
               SizedBox(
                 height: 400,
-
                 child: ListView.builder(
+                  physics: NeverScrollableScrollPhysics(),
                   itemCount: settingComponent.length,
                   itemBuilder: (context, index) {
                     final item = settingComponent[index];
                     final IconData icon = item['icon'];
                     final String text = item['title'];
-                    bool isDivider = (index + 1) % 2 == 0? true : false; //2번째면 디바이더를 그리기 위한 불 변수
+                    bool isDivider = (index + 1) % 2 == 0
+                        ? true
+                        : false; //2번째면 디바이더를 그리기 위한 불 변수
 
                     return Column(
                       children: [
@@ -174,7 +211,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                             color: Colors.white54,
                           ),
                           onTap: () {
-                            // 리스트 클릭 시 실행할 동작 구현 영역
+                            nextPage(index);
                           },
                         ),
                         if (isDivider)
@@ -194,40 +231,42 @@ class _MyPageScreenState extends State<MyPageScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 25),
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    side: BorderSide(
-                      color: Colors.red,
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        side: BorderSide(
+                          color: Colors.red,
+                        ),
+                        minimumSize: Size(double.infinity, 50)
                     ),
-                    minimumSize: Size(double.infinity, 50)
-                  ),
 
                     onPressed: () {
                       showDialog(
                         context: context,
-                        barrierDismissible: false, // 다이얼로그 바깥을 눌러도 안 닫히게 설정 (선택 사항)
+                        barrierDismissible: false,
+                        // 다이얼로그 바깥을 눌러도 안 닫히게 설정 (선택 사항)
                         builder: (BuildContext context) {
                           return AlertDialog(
                             backgroundColor: Color(0xFF1E1E1E),
                             title: const Text(
-                                '확인',
+                              '확인',
                               style: TextStyle(
-                                fontSize: 20,
-                                color: Colors.white
+                                  fontSize: 20,
+                                  color: Colors.white
                               ),
                             ),
                             content: const Text(
-                                '정말로 삭제하시겠습니까?',
+                              '정말로 삭제하시겠습니까?',
                               style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16
+                                  color: Colors.white,
+                                  fontSize: 16
                               ),
                             ),
                             actions: [
                               // '아니오' 버튼
                               TextButton(
                                 onPressed: () {
-                                  Navigator.of(context).pop(false); // false 값 전달하며 닫기
+                                  Navigator.of(context).pop(
+                                      false); // false 값 전달하며 닫기
                                 },
                                 child: const Text('아니오'),
                               ),
@@ -239,9 +278,10 @@ class _MyPageScreenState extends State<MyPageScreen> {
 
                                   //모든 화면을 메모리에서 삭제 시킨 후 받기
                                   Navigator.pushAndRemoveUntil(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => const LoginScreen()),
-                                    (route) => false,
+                                    context,
+                                    MaterialPageRoute(builder: (
+                                        context) => const LoginScreen()),
+                                        (route) => false,
                                   );
                                 },
                                 child: const Text('예'),
@@ -254,9 +294,9 @@ class _MyPageScreenState extends State<MyPageScreen> {
                     child: Text(
                       '로그아웃',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red
                       ),
                     )
                 ),

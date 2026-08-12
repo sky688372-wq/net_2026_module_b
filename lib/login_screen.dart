@@ -18,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   //이메일, 이름을 저장히는 함수 -> 나중에 마이페이지 표시할 때 쓸 예정임
   Future<void> setLaterData() async {
+    //{"success":true,"message":"로그인 성공","data":{"token":"vinyl-token-1786517757873","user":{"id":1,"email":"test@example.com","name":"홍길동"}}}
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString('email', _emailCtrl.text);
     prefs.setString('name', _passwordCtrl.text);
@@ -97,6 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', data['data']['token']);
+        await prefs.setInt('userId', data['data']['user']['id']); //유저 아이디를 로컬에 저장함
 
         _showSnackBar("로그인 성공");
 
@@ -104,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
           return;
         }
 
-        setLaterData();
+        setLaterData(); //이메일, 유저 id, 비밀번호 저장
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainPageScreen()),

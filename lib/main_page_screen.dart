@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:net_2026/detail_screen.dart';
+import 'package:net_2026/module_b/add_product_screen.dart';
+import 'package:net_2026/module_b/barcode_screen.dart';
 import 'package:net_2026/module_b/my_page_screen.dart';
+import 'package:net_2026/module_b/my_sales_screen.dart';
 import 'package:net_2026/module_b/notification_screen.dart';
 import 'package:net_2026/module_b/wishlist_screen.dart';
 import 'package:net_2026/search_screen.dart';
@@ -312,10 +316,7 @@ class _MainPageScreenState extends State<MainPageScreen>
                         ),
                         suffixIcon: IconButton(
                           onPressed: () {
-                            ScaffoldMessenger.of(context).clearSnackBars();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("해당 기능은 준비중입니다.")),
-                            );
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => BarcodeScreen()));
                           },
                           icon: Icon(
                             Symbols.barcode_scanner,
@@ -808,17 +809,8 @@ class _MainPageScreenState extends State<MainPageScreen>
             selectedGenre: _selectedGenre,
           ),
 
-          // 3. 더보기/진행
-          const Center(
-            child: Text(
-              "현재 진행중인 부분",
-              style: TextStyle(
-                fontSize: 39,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+          // 3. 상품 등록 화면은진행 중
+          MySalesScreen(),
 
           // 4. 관심상품
           WishlistScreen(key: ValueKey(_currentIndex)),

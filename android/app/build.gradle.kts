@@ -38,6 +38,10 @@ android {
         }
     }
 }
+dependencies {
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.guava:guava:33.4.8-android")
+}
 
 flutter {
     source = "../.."

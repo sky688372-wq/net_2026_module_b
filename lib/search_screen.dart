@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:net_2026/detail_screen.dart';
+import 'package:net_2026/module_b/barcode_screen.dart';
 import 'package:net_2026/module_b/notification_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // main.dart에 정의된 routeObserver를 사용하기 위해 임포트
@@ -402,10 +403,7 @@ class _SearchScreenState extends State<SearchScreen> with RouteAware {
                     ),
                     suffixIcon: IconButton(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).clearSnackBars();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("현재 해당 기능은 준비중입니다."))
-                        );
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => BarcodeScreen()));
                       },
                       icon: Icon(Symbols.barcode_scanner, color: Colors.white.withValues(alpha: 0.5)),
                     ),

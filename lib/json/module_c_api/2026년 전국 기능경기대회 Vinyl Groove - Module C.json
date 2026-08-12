@@ -1,0 +1,275 @@
+{
+  "version": 6,
+  "entities": [
+    {
+      "entity": {
+        "type": "Project",
+        "description": "##### Authentication\n- Header: `Authorization: Bearer ${\"token\"}` 또는\n- Query: `userId=${userId}`\n\n##### Environments\n- `baseUrl`: API 서버 호스트\n- `token`: Bearer 토큰\n- `userId`: 사용자 ID (인증 대체 시)",
+        "id": "fdff67ec-142e-4aef-b8b2-55ec73545dfc",
+        "name": "2026년 전국 기능경기대회 Vinyl Groove - Module C"
+      },
+      "children": [
+        {
+          "entity": {
+            "type": "Service",
+            "id": "d95b506e-e1e3-4bec-bb2c-155697adeac5",
+            "name": "001. 인증"
+          },
+          "children": [
+            {
+              "entity": {
+                "type": "Request",
+                "method": {
+                  "link": "https://tools.ietf.org/html/rfc7231#section-4.3",
+                  "name": "POST",
+                  "requestBody": true
+                },
+                "body": {
+                  "bodyType": "Text",
+                  "textBody": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"Test1234!\"\n}"
+                },
+                "uri": {
+                  "scheme": {
+                    "name": "http",
+                    "version": "V11"
+                  },
+                  "host": "${baseUrl}",
+                  "path": "/auth/login/v2"
+                },
+                "description": "##### Request Body\n| 필드 | 타입 | 필수 | 설명 |\n|---|---|---|---|\n| email | string | Y | 이메일 |\n| password | string | Y | 비밀번호 |\n\n##### 200 OK\n```\n{\n    \"success\": true,\n    \"message\": \"로그인 성공\",\n    \"data\": {\n        \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxx.yyy\",\n        \"user\": { \"id\": 1, \"email\": \"test@example.com\", \"name\": \"홍길동\" }\n    }\n}\n```\n\n##### 401 Unauthorized\n```\n{\n    \"success\": false,\n    \"message\": \"로그인 실패\",\n    \"errors\": [\n        { \"code\": \"INVALID_CREDENTIALS\", \"message\": \"이메일 또는 비밀번호가 올바르지 않습니다.\" }\n    ]\n}\n```",
+                "id": "f2c48473-0842-49b6-a0e1-4b6356ef6167",
+                "name": "로그인 v2",
+                "headers": [
+                  {
+                    "enabled": true,
+                    "name": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "assertions": []
+              }
+            }
+          ]
+        },
+        {
+          "entity": {
+            "type": "Service",
+            "id": "a2e75072-9c55-4923-bc65-77b7c6687294",
+            "name": "002. 상품 관리"
+          },
+          "children": [
+            {
+              "entity": {
+                "type": "Request",
+                "method": {
+                  "link": "https://tools.ietf.org/html/rfc7231#section-4.3",
+                  "name": "POST",
+                  "requestBody": true
+                },
+                "body": {
+                  "bodyType": "Text",
+                  "textBody": "{\n    \"image\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB...\",\n    \"type\": \"ALBUM\"\n}"
+                },
+                "uri": {
+                  "scheme": {
+                    "name": "http",
+                    "version": "V11"
+                  },
+                  "host": "${baseUrl}",
+                  "path": "/upload/image",
+                  "query": {
+                    "delimiter": "&",
+                    "items": [
+                      {
+                        "enabled": true,
+                        "name": "userId",
+                        "value": "${userId}"
+                      }
+                    ]
+                  }
+                },
+                "description": "##### Request Body\n| 필드 | 타입 | 필수 | 설명 |\n|---|---|---|---|\n| image | string | Y | base64 인코딩 이미지 (`data:image/...;base64,...`) |\n| type | string | N | `ALBUM` / `PROFILE` (기본 `ALBUM`) |\n\n##### 201 Created\n```\n{\n    \"success\": true,\n    \"message\": \"이미지가 업로드되었습니다.\",\n    \"data\": {\n        \"imageUrl\": \"https://api.vinylgroove.com/images/album/uploaded_20260528_a3f1c8.jpg\",\n        \"type\": \"ALBUM\",\n        \"size\": 245678,\n        \"uploadedAt\": \"2026-05-28T14:55:00Z\"\n    }\n}\n```\n\n##### 400 Bad Request\n```\n{\n    \"success\": false,\n    \"message\": \"유효성 검사 실패\",\n    \"errors\": [ { \"code\": \"INVALID_FORMAT\", \"message\": \"올바른 이미지 형식이 아닙니다.\" } ]\n}\n```\n\n##### 413 Payload Too Large\n```\n{\n    \"success\": false,\n    \"message\": \"이미지 업로드 실패\",\n    \"errors\": [ { \"code\": \"FILE_TOO_LARGE\", \"message\": \"이미지 크기는 10MB 이하여야 합니다.\" } ]\n}\n```",
+                "id": "86258c6a-a614-434a-a30c-9dde33e74f56",
+                "name": "이미지 업로드",
+                "headers": [
+                  {
+                    "enabled": true,
+                    "name": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "enabled": true,
+                    "name": "Authorization",
+                    "value": "Bearer ${\"token\"}"
+                  }
+                ],
+                "assertions": []
+              }
+            },
+            {
+              "entity": {
+                "type": "Request",
+                "method": {
+                  "link": "https://tools.ietf.org/html/rfc7231#section-4.3",
+                  "name": "POST",
+                  "requestBody": true
+                },
+                "body": {
+                  "bodyType": "Text",
+                  "textBody": "{\n    \"albumName\": \"Test Vinyl Album\",\n    \"artist\": \"Test Artist\",\n    \"genre\": \"ROCK\",\n    \"condition\": \"NM\",\n    \"price\": 45000,\n    \"tradeMethod\": \"BOTH\",\n    \"barcode\": \"0000123456789\",\n    \"description\": \"테스트용 바이닐 앨범입니다.\",\n    \"albumImage\": \"https://api.vinylgroove.com/images/album/uploaded_20260528_a3f1c8.jpg\"\n}"
+                },
+                "uri": {
+                  "scheme": {
+                    "name": "http",
+                    "version": "V11"
+                  },
+                  "host": "${baseUrl}",
+                  "path": "/products",
+                  "query": {
+                    "delimiter": "&",
+                    "items": [
+                      {
+                        "enabled": true,
+                        "name": "userId",
+                        "value": "${userId}"
+                      }
+                    ]
+                  }
+                },
+                "description": "##### Request Body\n| 필드 | 타입 | 필수 | 설명 |\n|---|---|---|---|\n| albumName | string | Y | 앨범명 |\n| artist | string | Y | 아티스트 |\n| genre | string | Y | 장르 코드 |\n| condition | string | Y | 음반 상태 코드 |\n| price | number | Y | 가격 (1,000 이상) |\n| tradeMethod | string | Y | 거래 방식 |\n| albumImage | string | Y | 이미지 URL |\n| barcode | string | N | 바코드 (EAN-13/EAN-8) |\n| description | string | N | 상품 설명 |\n\n##### genre 코드\n`ROCK`, `JAZZ`, `POP`, `HIPHOP`, `ELECTRONIC`, `CLASSICAL`, `RNB_SOUL`, `ETC`\n\n##### condition 코드\n| code | description |\n|---|---|\n| SS | 미개봉 새상품 |\n| M | Mint - 완벽한 상태 |\n| NM | Near Mint - 거의 새것 |\n| EX | Excellent - 약간의 사용감 |\n| VG+ | Very Good+ - 양호 |\n| VG | Very Good - 사용감 있음 |\n| G | Good - 재생 가능 |\n\n##### tradeMethod 코드\n| code | description |\n|---|---|\n| DIRECT | 직거래 |\n| DELIVERY | 택배 |\n| BOTH | 둘 다 |\n\n##### 201 Created\n```\n{\n    \"success\": true,\n    \"message\": \"상품이 등록되었습니다.\",\n    \"data\": {\n        \"id\": 100,\n        \"albumName\": \"Test Vinyl Album\",\n        \"artist\": \"Test Artist\",\n        \"genre\": \"ROCK\",\n        \"condition\": \"NM\",\n        \"price\": 45000,\n        \"tradeMethod\": \"BOTH\",\n        \"barcode\": \"0000123456789\",\n        \"description\": \"테스트용 바이닐 앨범입니다.\",\n        \"albumImage\": \"https://api.vinylgroove.com/images/album/uploaded_20260528_a3f1c8.jpg\",\n        \"createdAt\": \"2026-05-28T15:00:00Z\"\n    }\n}\n```\n\n##### 400 Bad Request\n```\n{\n    \"success\": false,\n    \"message\": \"유효성 검사 실패\",\n    \"errors\": [\n        { \"code\": \"REQUIRED\", \"field\": \"albumImage\", \"message\": \"상품 이미지를 등록해주세요.\" },\n        { \"code\": \"REQUIRED\", \"field\": \"albumName\", \"message\": \"앨범명을 입력해주세요.\" },\n        { \"code\": \"REQUIRED\", \"field\": \"artist\", \"message\": \"아티스트를 입력해주세요.\" },\n        { \"code\": \"REQUIRED\", \"field\": \"genre\", \"message\": \"장르를 선택해주세요.\" },\n        { \"code\": \"REQUIRED\", \"field\": \"condition\", \"message\": \"음반 상태를 선택해주세요.\" },\n        { \"code\": \"INVALID_RANGE\", \"field\": \"price\", \"message\": \"가격은 1,000원 이상 입력해주세요.\" },\n        { \"code\": \"REQUIRED\", \"field\": \"tradeMethod\", \"message\": \"거래 방식을 선택해주세요.\" }\n    ]\n}\n```",
+                "id": "b5e8227a-e662-47c3-8a8b-24f495d9b1e2",
+                "name": "상품 등록",
+                "headers": [
+                  {
+                    "enabled": true,
+                    "name": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "enabled": true,
+                    "name": "Authorization",
+                    "value": "Bearer ${\"token\"}"
+                  }
+                ],
+                "assertions": []
+              }
+            },
+            {
+              "entity": {
+                "type": "Request",
+                "method": {
+                  "link": "https://tools.ietf.org/html/rfc7231#section-4.3",
+                  "name": "GET"
+                },
+                "body": {
+                  "bodyType": "Text",
+                  "textBody": ""
+                },
+                "uri": {
+                  "scheme": {
+                    "name": "http",
+                    "version": "V11"
+                  },
+                  "host": "${baseUrl}",
+                  "path": "/products/me",
+                  "query": {
+                    "delimiter": "&",
+                    "items": [
+                      {
+                        "enabled": true,
+                        "name": "userId",
+                        "value": "${userId}"
+                      }
+                    ]
+                  }
+                },
+                "description": "##### 200 OK\n```\n{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": 100,\n            \"albumName\": \"Let It Be\",\n            \"artist\": \"The Beatles\",\n            \"genre\": \"ROCK\",\n            \"condition\": \"VG\",\n            \"price\": 40000,\n            \"tradeMethod\": \"DIRECT\",\n            \"albumImage\": \"https://api.vinylgroove.com/images/album/letitbe.jpg\",\n            \"createdAt\": \"2026-05-28T15:00:00Z\"\n        }\n    ],\n    \"totalCount\": 1\n}\n```\n\n##### 200 OK - 빈 목록\n```\n{ \"success\": true, \"data\": [], \"totalCount\": 0 }\n```",
+                "id": "34d29455-d420-4ce7-af5f-2df76660438c",
+                "name": "내 등록 상품 조회",
+                "headers": [
+                  {
+                    "enabled": true,
+                    "name": "Authorization",
+                    "value": "Bearer ${\"token\"}"
+                  }
+                ],
+                "assertions": []
+              }
+            },
+            {
+              "entity": {
+                "type": "Request",
+                "method": {
+                  "link": "https://tools.ietf.org/html/rfc7231#section-4.3",
+                  "name": "DELETE"
+                },
+                "body": {
+                  "bodyType": "Text",
+                  "textBody": ""
+                },
+                "uri": {
+                  "scheme": {
+                    "name": "http",
+                    "version": "V11"
+                  },
+                  "host": "${baseUrl}",
+                  "path": "/products/100",
+                  "query": {
+                    "delimiter": "&",
+                    "items": [
+                      {
+                        "enabled": true,
+                        "name": "userId",
+                        "value": "${userId}"
+                      }
+                    ]
+                  }
+                },
+                "description": "##### Path Parameters\n| 이름 | 타입 | 설명 |\n|---|---|---|\n| id | number | 상품 ID |\n\n##### 200 OK\n```\n{\n    \"success\": true,\n    \"message\": \"상품이 삭제되었습니다.\",\n    \"data\": { \"id\": 100 }\n}\n```\n\n##### 403 Forbidden\n```\n{\n    \"success\": false,\n    \"message\": \"삭제 권한이 없습니다.\",\n    \"errors\": [ { \"code\": \"FORBIDDEN\", \"message\": \"본인이 등록한 상품만 삭제할 수 있습니다.\" } ]\n}\n```\n\n##### 404 Not Found\n```\n{\n    \"success\": false,\n    \"message\": \"상품을 찾을 수 없습니다.\",\n    \"errors\": [ { \"code\": \"PRODUCT_NOT_FOUND\", \"message\": \"존재하지 않는 상품입니다.\" } ]\n}\n```",
+                "id": "ffaf959c-896a-459f-8812-bafb839d10cf",
+                "name": "상품 삭제",
+                "headers": [
+                  {
+                    "enabled": true,
+                    "name": "Authorization",
+                    "value": "Bearer ${\"token\"}"
+                  }
+                ],
+                "assertions": []
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "environments": [
+    {
+      "id": "8979732d-cdc6-4938-8a1c-b81032ab7cd7",
+      "name": "2026년 전국 기능경기대회 Vinyl Groove - Module C",
+      "variables": {
+        "a4725b8d-cc2e-4f00-a493-4db668887c55": {
+          "createdAt": "2026-05-28T18:00:00.000+09:00",
+          "name": "baseUrl",
+          "value": "http://api.vinylgroove.com",
+          "enabled": true,
+          "private": false
+        },
+        "5644db5c-815e-4c38-bb84-f72fc068b179": {
+          "createdAt": "2026-05-28T18:00:00.000+09:00",
+          "name": "token",
+          "value": "token_example",
+          "enabled": true,
+          "private": false
+        },
+        "496457fb-0d9a-4325-8331-52acd9a02f36": {
+          "createdAt": "2026-05-28T18:00:00.000+09:00",
+          "name": "userId",
+          "value": "1",
+          "enabled": true,
+          "private": false
+        }
+      }
+    }
+  ]
+}
