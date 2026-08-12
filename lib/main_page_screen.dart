@@ -85,6 +85,43 @@ class _MainPageScreenState extends State<MainPageScreen>
 
   String _token = ""; // 토큰 변수
 
+
+  final String baseUrl = "https://connexChat-server.onrender.com/vinyl";
+  int unreadCount = 0; //이 값으로 알람 배지의 숫자를 표시할거임
+
+  Future<void> fetchNotifications() async {
+    if (_token.isEmpty) return;
+
+    final url = "$baseUrl/notifications";
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Authorization": "Bearer $_token"
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final parsedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+
+        if (parsedData['success'] == true) {
+          if (mounted) {
+            setState(() {
+              unreadCount = parsedData['data']['unreadCount'] ?? 0;
+            });
+          }
+        }
+      } else {
+        debugPrint("알림 통신 오류, 오류 코드 : ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("알림 통신 오류, $e");
+    }
+  }
+
+
   // 로컬 토큰 가져오기
   Future<void> fetchToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -159,6 +196,7 @@ class _MainPageScreenState extends State<MainPageScreen>
   @override
   void initState() {
     super.initState();
+    fetchNotifications();
 
     //1. 애니메이션 관련
 
@@ -230,15 +268,25 @@ class _MainPageScreenState extends State<MainPageScreen>
                           height: 50,
                         ),
                       ),
+
                       IconButton(
                         onPressed: () {
                           Navigator.push(context, MaterialPageRoute(builder: (context) => NotificationScreen()));
                         },
-                        icon: const Icon(
-                          Icons.notifications,
-                          color: Colors.white,
+                        icon: Badge(
+                          isLabelVisible: unreadCount > 0, // unreadCount가 0보다 클 때만 배지 표시
+                          label: Text(
+                            unreadCount.toString(),
+                            style: const TextStyle(color: Colors.white, fontSize: 11),
+                          ),
+                          backgroundColor: Colors.redAccent,
+                          child: const Icon(
+                            Icons.notifications,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
+
                     ],
                   ),
 
@@ -258,7 +306,9 @@ class _MainPageScreenState extends State<MainPageScreen>
                           borderSide: const BorderSide(color: Colors.white),
                         ),
                         prefixIcon: IconButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            //현재까지 이 검색 부분을 구현하라는 말은 없음
+                          },
                           icon: Icon(
                             Icons.search,
                             color: Colors.white.withValues(alpha: 0.5),
@@ -734,7 +784,7 @@ class _MainPageScreenState extends State<MainPageScreen>
                     child: CircularProgressIndicator(),
                   )
                       : SizedBox(
-                    height: 300, // [수정] 오버플로우를 막기 위해 높이를 300으로 넉넉하게 설정
+                    height: 270,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -754,8 +804,8 @@ class _MainPageScreenState extends State<MainPageScreen>
             ),
           ),
 
-          // 2. 검색
-          const SearchScreen(),
+          // 2. 검색 화면 (현재 탭 인덱스를 전달)
+          SearchScreen(tabIndex: _currentIndex),
 
           // 3. 더보기/진행
           const Center(
@@ -798,6 +848,7 @@ class _MainPageScreenState extends State<MainPageScreen>
               _currentIndex = value;
             });
             //탭을 이동할 때마다 좋아요 토글 버튼의 상태를 일치시키기 위해서 setState
+
             getFavoriteAlbum();
           },
           items: const [
@@ -920,7 +971,7 @@ class _MainPageScreenState extends State<MainPageScreen>
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -944,7 +995,7 @@ class _MainPageScreenState extends State<MainPageScreen>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 5),
                   Text(
                     "₩ ${formatPrice(item['price'])}",
                     style: const TextStyle(

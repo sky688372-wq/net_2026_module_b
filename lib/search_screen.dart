@@ -6,6 +6,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:net_2026/detail_screen.dart';
 import 'package:net_2026/module_b/notification_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// main.dart에 정의된 routeObserver를 사용하기 위해 임포트
+import 'package:net_2026/main.dart';
 
 // API 반환 데이터 모델
 class AlbumModel {
@@ -44,14 +46,16 @@ class AlbumModel {
 }
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  final int tabIndex;
+
+  const SearchScreen({super.key, this.tabIndex = 0});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
-  // 제공해주신 전체 Endpoint URL 반영
+// 1. RouteAware 믹스인 추가: 화면 전환(Back 버튼 등) 감지를 위함
+class _SearchScreenState extends State<SearchScreen> with RouteAware {
   final String baseUrl = "https://connexChat-server.onrender.com/vinyl/products";
 
   final TextEditingController _ctrl = TextEditingController();
@@ -72,6 +76,7 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() {
         favoriteAlbum = localData;
       });
+      debugPrint("SearchScreen: Local Favorites Synced -> $favoriteAlbum");
     }
   }
 
@@ -89,7 +94,6 @@ class _SearchScreenState extends State<SearchScreen> {
 
     await prefs.setStringList('favorite_ids', favoriteAlbum);
   }
-  // ----------------------------------------------------
 
   // 장르 데이터 및 매핑
   final List<String> genreList = [
@@ -137,11 +141,53 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    getFavoriteAlbum(); // 초기화 시 좋아요 데이터 불러오기
+    getFavoriteAlbum();
     fetchProducts();
   }
 
-  // 로컬 저장소에서 토큰 가져오는 함수
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 2. RouteObserver에 현재 화면 등록
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    // 3. RouteObserver 등록 해제 (메모리 누수 방지)
+    routeObserver.unsubscribe(this);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  // 4. 다른 화면에서 이 화면으로 돌아올 때 호출 (Navigator.pop 등)
+  @override
+  void didPopNext() {
+    debugPrint("SearchScreen: didPopNext triggered. Refreshing favorites.");
+    getFavoriteAlbum();
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // 5. 탭 전환 감지 (IndexedStack 환경)
+    if (oldWidget.tabIndex != widget.tabIndex) {
+      // 탭이 Search(1)로 변경되었을 때 로컬 데이터 최신화
+      if (widget.tabIndex == 1) {
+        getFavoriteAlbum();
+      }
+      // 탭 변경 시 데이터 재요청 (검색 조건 유지 목적 등)
+      fetchProducts();
+    } else {
+      // 상위 위젯(MainPage)의 일반적인 리빌드 시에도 상태 동기화 유지
+      getFavoriteAlbum();
+    }
+  }
+
   Future<String> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('token') ?? '';
@@ -156,19 +202,16 @@ class _SearchScreenState extends State<SearchScreen> {
     try {
       final token = await _getToken();
 
-      // 선택된 조건 추출
       String genreKey = genreList[genreState.indexOf(true)];
       String conditionKey = albums[albumConditions.indexOf(true)];
       String tradeKey = tradeMethods[tradeState.indexOf(true)];
 
-      // Query Parameter 설정
       Map<String, String> queryParams = {
         'sort': sortApiMap[_selectedSort] ?? 'recent',
         'page': '1',
-        'size': '50', // 관심상품 및 연동을 위해 한 번에 가져오는 항목 수 증대
+        'size': '50',
       };
 
-      // 검색어 추가
       if (_ctrl.text.trim().isNotEmpty) {
         queryParams['keyword'] = _ctrl.text.trim();
       }
@@ -256,12 +299,6 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF131313),
@@ -286,8 +323,9 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   IconButton(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationScreen())
-                      );
+                      // 6. 알림 화면 이동 후 돌아올 때 동기화 (.then 추가)
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationScreen()))
+                          .then((_) => getFavoriteAlbum());
                     },
                     icon: const Icon(Icons.notifications, color: Colors.white),
                   ),
@@ -299,7 +337,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: TextField(
                   controller: _ctrl,
-                  onSubmitted: (val) => fetchProducts(), // 키보드 엔터(완료) 버튼 제출
+                  onSubmitted: (val) => fetchProducts(),
                   textInputAction: TextInputAction.search,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
@@ -310,7 +348,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       borderSide: const BorderSide(color: Colors.white),
                     ),
                     prefixIcon: IconButton(
-                      onPressed: () => fetchProducts(), // 돋보기 아이콘 클릭 검색
+                      onPressed: () => fetchProducts(),
                       icon: Icon(Icons.search, color: Colors.white.withValues(alpha: 0.5)),
                     ),
                     suffixIcon: IconButton(
@@ -451,7 +489,6 @@ class _SearchScreenState extends State<SearchScreen> {
                       )
                     ]
                 ),
-
                 child: Divider(
                   color: Colors.white.withValues(alpha: 0.04),
                   height: 10,
@@ -503,16 +540,15 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 itemBuilder: (context, index) {
                   final album = _filteredList[index];
-                  // 좋아요 여부 체크 확인
                   bool isFavorite = favoriteAlbum.contains(album.id.toString());
 
                   return GestureDetector(
                     onTap: () {
+                      // 7. 상세 화면 이동 후 돌아올 때 동기화 (.then 추가)
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => DetailScreen(id: album.id)),
                       ).then((_) {
-                        // 뒤로가기로 돌아왔을 때 상태 반영을 위해 재호출
                         getFavoriteAlbum();
                       });
                     },
@@ -541,13 +577,11 @@ class _SearchScreenState extends State<SearchScreen> {
                                   child: Text(album.condition, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                                 ),
                               ),
-                              // 구조 개선: 하트 아이콘 Positioned를 Stack 내부로 이동
                               Positioned(
                                 top: 6,
                                 right: 6,
                                 child: GestureDetector(
                                   onTap: () {
-                                    // 좋아요 토글
                                     toggleFavorite(album.id);
                                   },
                                   child: CircleAvatar(
