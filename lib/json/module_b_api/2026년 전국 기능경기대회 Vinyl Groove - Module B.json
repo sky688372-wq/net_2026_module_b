@@ -1,0 +1,251 @@
+{
+  "version": 6,
+  "entities": [
+    {
+      "entity": {
+        "type": "Project",
+        "description": "##### Authentication\n- Header: `Authorization: Bearer ${\"token\"}` 또는\n- Query: `userId=${userId}`\n\n##### Environments\n- `baseUrl`: API 서버 호스트\n- `token`: Bearer 토큰\n- `userId`: 사용자 ID (인증 대체 시)",
+        "id": "fa402212-6ec6-4291-9332-202973fbe37f",
+        "name": "2026년 전국 기능경기대회 Vinyl Groove - Module B"
+      },
+      "children": [
+        {
+          "entity": {
+            "type": "Service",
+            "id": "04f18edb-2b3b-4612-a169-b3110bb045ea",
+            "name": "001. 바코드 검색"
+          },
+          "children": [
+            {
+              "entity": {
+                "type": "Request",
+                "method": {
+                  "link": "https://tools.ietf.org/html/rfc7231#section-4.3",
+                  "name": "GET"
+                },
+                "body": {
+                  "bodyType": "Text",
+                  "textBody": ""
+                },
+                "uri": {
+                  "scheme": {
+                    "name": "http",
+                    "version": "V11"
+                  },
+                  "host": "${baseUrl}",
+                  "path": "/products",
+                  "query": {
+                    "delimiter": "&",
+                    "items": [
+                      {
+                        "enabled": true,
+                        "name": "barcode",
+                        "value": "0000600406652385"
+                      },
+                      {
+                        "enabled": true,
+                        "name": "userId",
+                        "value": "${userId}"
+                      }
+                    ]
+                  }
+                },
+                "description": "##### Query Parameters\n| 이름 | 타입 | 필수 | 설명 |\n|---|---|---|---|\n| barcode | string | Y | EAN-13 / EAN-8 바코드 값 |\n\n##### 200 OK - 일치 상품 존재\n```\n{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": 1,\n            \"albumName\": \"Blonde\",\n            \"artist\": \"Frank Ocean\",\n            \"genre\": \"RNB_SOUL\",\n            \"condition\": \"M\",\n            \"price\": 95000,\n            \"tradeMethod\": \"DIRECT\",\n            \"barcode\": \"0000600406652385\",\n            \"albumImage\": \"https://api.vinylgroove.com/images/album/blonde.jpg\"\n        }\n    ],\n    \"totalCount\": 1\n}\n```\n\n##### 200 OK - 일치 상품 없음\n```\n{\n    \"success\": true,\n    \"data\": [],\n    \"totalCount\": 0\n}\n```",
+                "id": "c93f1db7-310a-4fbe-9011-d16091efe5ab",
+                "name": "바코드로 상품 검색",
+                "headers": [
+                  {
+                    "enabled": true,
+                    "name": "Authorization",
+                    "value": "Bearer ${\"token\"}"
+                  }
+                ],
+                "assertions": []
+              }
+            }
+          ]
+        },
+        {
+          "entity": {
+            "type": "Service",
+            "id": "c1cc3edb-ac82-4c9e-8136-270e81e3ac83",
+            "name": "002. 알림"
+          },
+          "children": [
+            {
+              "entity": {
+                "type": "Request",
+                "method": {
+                  "link": "https://tools.ietf.org/html/rfc7231#section-4.3",
+                  "name": "GET"
+                },
+                "body": {
+                  "bodyType": "Text",
+                  "textBody": ""
+                },
+                "uri": {
+                  "scheme": {
+                    "name": "http",
+                    "version": "V11"
+                  },
+                  "host": "${baseUrl}",
+                  "path": "/notifications",
+                  "query": {
+                    "delimiter": "&",
+                    "items": [
+                      {
+                        "enabled": true,
+                        "name": "userId",
+                        "value": "${userId}"
+                      }
+                    ]
+                  }
+                },
+                "description": "##### 200 OK\n```\n{\n    \"success\": true,\n    \"data\": {\n        \"unreadCount\": 3,\n        \"notifications\": [\n            {\n                \"id\": 101,\n                \"type\": \"PRICE_DOWN\",\n                \"title\": \"가격 인하\",\n                \"productId\": 22,\n                \"albumName\": \"Abbey Road\",\n                \"artist\": \"The Beatles\",\n                \"albumImage\": \"https://api.vinylgroove.com/images/album/abbeyroad.jpg\",\n                \"previousPrice\": 45000,\n                \"currentPrice\": 20000,\n                \"isRead\": false,\n                \"createdAt\": \"2026-05-28T13:42:00Z\"\n            }\n        ]\n    }\n}\n```\n\n##### type 코드\n| code | description |\n|---|---|\n| PRICE_DOWN | 가격 인하 |\n| PRICE_UP | 가격 인상 |\n\n##### 200 OK - 빈 목록\n```\n{ \"success\": true, \"data\": { \"unreadCount\": 0, \"notifications\": [] } }\n```",
+                "id": "0269bb0b-6b96-49b2-8bb8-457a54f0946e",
+                "name": "알림 목록 조회",
+                "headers": [
+                  {
+                    "enabled": true,
+                    "name": "Authorization",
+                    "value": "Bearer ${\"token\"}"
+                  }
+                ],
+                "assertions": []
+              }
+            },
+            {
+              "entity": {
+                "type": "Request",
+                "method": {
+                  "link": "https://tools.ietf.org/html/rfc7231#section-4.3",
+                  "name": "PUT",
+                  "requestBody": true
+                },
+                "body": {
+                  "bodyType": "Text",
+                  "textBody": ""
+                },
+                "uri": {
+                  "scheme": {
+                    "name": "http",
+                    "version": "V11"
+                  },
+                  "host": "${baseUrl}",
+                  "path": "/notifications/read",
+                  "query": {
+                    "delimiter": "&",
+                    "items": [
+                      {
+                        "enabled": true,
+                        "name": "id",
+                        "value": "101"
+                      },
+                      {
+                        "enabled": false,
+                        "name": "all",
+                        "value": "true"
+                      },
+                      {
+                        "enabled": true,
+                        "name": "userId",
+                        "value": "${userId}"
+                      }
+                    ]
+                  }
+                },
+                "description": "##### Query Parameters\n| 이름 | 타입 | 설명 |\n|---|---|---|\n| id | number | 특정 알림 ID (단건) |\n| all | boolean | `true` 시 전체 읽음 |\n\n`id`와 `all` 중 하나는 필수.\n\n##### 200 OK - 단건\n```\n{\n    \"success\": true,\n    \"message\": \"알림이 읽음 처리되었습니다.\",\n    \"data\": { \"id\": 101, \"isRead\": true, \"updatedCount\": 1 }\n}\n```\n\n##### 200 OK - 전체\n```\n{\n    \"success\": true,\n    \"message\": \"모든 알림이 읽음 처리되었습니다.\",\n    \"data\": { \"updatedCount\": 3 }\n}\n```\n\n##### 400 Bad Request\n```\n{\n    \"success\": false,\n    \"message\": \"유효성 검사 실패\",\n    \"errors\": [ { \"code\": \"INVALID_PARAMS\", \"message\": \"id 또는 all 파라미터가 필요합니다.\" } ]\n}\n```",
+                "id": "2ffd0cc1-af28-4cfa-965c-fdc18ff0263e",
+                "name": "알림 읽음 처리",
+                "headers": [
+                  {
+                    "enabled": true,
+                    "name": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "enabled": true,
+                    "name": "Authorization",
+                    "value": "Bearer ${\"token\"}"
+                  }
+                ],
+                "assertions": []
+              }
+            },
+            {
+              "entity": {
+                "type": "Request",
+                "method": {
+                  "link": "https://tools.ietf.org/html/rfc7231#section-4.3",
+                  "name": "DELETE"
+                },
+                "body": {
+                  "bodyType": "Text",
+                  "textBody": ""
+                },
+                "uri": {
+                  "scheme": {
+                    "name": "http",
+                    "version": "V11"
+                  },
+                  "host": "${baseUrl}",
+                  "path": "/notifications",
+                  "query": {
+                    "delimiter": "&",
+                    "items": [
+                      {
+                        "enabled": true,
+                        "name": "userId",
+                        "value": "${userId}"
+                      }
+                    ]
+                  }
+                },
+                "description": "##### 200 OK\n```\n{\n    \"success\": true,\n    \"message\": \"모든 알림이 삭제되었습니다.\",\n    \"data\": { \"deletedCount\": 4 }\n}\n```",
+                "id": "dcbd43ed-9979-4c6b-acd2-89d2d40c56c0",
+                "name": "알림 전체 삭제",
+                "headers": [
+                  {
+                    "enabled": true,
+                    "name": "Authorization",
+                    "value": "Bearer ${\"token\"}"
+                  }
+                ],
+                "assertions": []
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "environments": [
+    {
+      "id": "a5cb206c-44c6-4000-9d51-0cade4faa352",
+      "name": "2026년 전국 기능경기대회 Vinyl Groove - Module B",
+      "variables": {
+        "04ab190b-fce3-41c5-b2d3-3e2135bd88ea": {
+          "createdAt": "2026-05-28T18:00:00.000+09:00",
+          "name": "baseUrl",
+          "value": "http://api.vinylgroove.com",
+          "enabled": true,
+          "private": false
+        },
+        "22d801c2-b674-468b-87b2-5f3ecd9ce3a5": {
+          "createdAt": "2026-05-28T18:00:00.000+09:00",
+          "name": "token",
+          "value": "token_example",
+          "enabled": true,
+          "private": false
+        },
+        "1e2ebb72-edb9-4bcc-93a7-19c718e4e6bf": {
+          "createdAt": "2026-05-28T18:00:00.000+09:00",
+          "name": "userId",
+          "value": "1",
+          "enabled": true,
+          "private": false
+        }
+      }
+    }
+  ]
+}
