@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 
 class MySalesScreen extends StatefulWidget {
   const MySalesScreen({super.key});
@@ -10,52 +13,146 @@ class MySalesScreen extends StatefulWidget {
 }
 
 class _MySalesScreenState extends State<MySalesScreen> {
-
   //토큰, 유저 id를 불러오는 함수 : 토큰이 존재함을 확인함 -> 고로 애는 범인이 아님
   var _token;
   var _userId;
+
+  File? _selectedImage;
+  String? _base64Image;
+  final ImagePicker _picker = ImagePicker();
+
+  // 화면이 로드될 때 토큰을 불러오도록 initState 추가
+  @override
+  void initState() {
+    super.initState();
+    _fetchToken();
+  }
 
   Future<void> _fetchToken() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     _token = prefs.getString('token') ?? '';
-    _userId  = prefs.getInt('userId') ?? 0;
+    _userId = prefs.getInt('userId') ?? 0;
   }
 
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      final base64String = base64Encode(bytes);
+
+      setState(() {
+        _selectedImage = File(image.path);
+        // 서버에서 요구하는 Base64 형식에 맞게 접두사 추가
+        _base64Image = "data:image/jpeg;base64,$base64String";
+      });
+    }
+  }
 
   //상품을 등록할 수 있도록 해주는 함수
   Future<void> submitProduct() async {
-    final url = "https://connexChat-server.onrender.com/vinyl/products";
+    // 1. 선택된 인덱스 찾기
+    int genreIndex = genreState.indexOf(true);
+    int conditionIndex = conditionState.indexOf(true);
+    int tradeIndex = tradeTypeState.indexOf(true);
+
+    if (genreIndex == -1 || conditionIndex == -1 || tradeIndex == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('필수 선택 항목(장르, 상태, 거래방식)을 선택해주세요.')),
+      );
+      return;
+    }
+
+    final tradeMethodCodes = ['DIRECT', 'DELIVERY', 'BOTH'];
+    final url = "https://connexChat-server.onrender.com/vinyl/products?userId=$_userId";
 
     try {
+      // ✅ [수정 부분] 상품 등록 전, 이미지가 선택되었다면 먼저 서버에 업로드
+      String finalImageUrl = "https://connexChat-server.onrender.com/vinyl/images/album/default.jpg";
+
+      if (_base64Image != null) {
+        final uploadUrl = "https://connexChat-server.onrender.com/vinyl/upload/image?userId=$_userId";
+        final uploadResponse = await http.post(
+          Uri.parse(uploadUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_token',
+          },
+          body: jsonEncode({
+            'image': _base64Image,
+            'type': 'ALBUM'
+          }),
+        );
+
+        if (uploadResponse.statusCode == 200 || uploadResponse.statusCode == 201) {
+          final uploadData = jsonDecode(uploadResponse.body);
+          finalImageUrl = uploadData['data']['imageUrl']; // 서버에서 반환한 URL
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('이미지 업로드에 실패했습니다.')),
+          );
+          return; // 업로드 실패 시 상품 등록 중단
+        }
+      }
+
+      // 2. 최종 상품 등록 요청
       final response = await http.post(
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_token',
-        }
+        },
+        body: jsonEncode({
+          'albumName': albumNameCtrl.text,
+          'artist': albumArtistCtrl.text,
+          'genre': genreList[genreIndex],
+          'condition': conditionInfoList[conditionIndex]['code'],
+          'price': int.tryParse(albumPriceCtrl.text) ?? 0,
+          'tradeMethod': tradeMethodCodes[tradeIndex],
+          'barcode': barCodeController.text,
+          'description': descriptionController.text,
+          'albumImage': finalImageUrl, // ✅ [수정 부분] 서버에서 받은 이미지 URL 적용
+        }),
       );
 
-      if(response.statusCode == 200) {
+      if (!mounted) return;
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('상품 등록 성공'))
+            const SnackBar(content: Text('상품 등록 성공'))
         );
+
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context, true);
+        } else {
+          albumNameCtrl.clear();
+          albumArtistCtrl.clear();
+          albumPriceCtrl.clear();
+          barCodeController.clear();
+          descriptionController.clear();
+          // ✅ [수정 부분] 성공 시 선택한 이미지도 초기화
+          setState(() {
+            _selectedImage = null;
+            _base64Image = null;
+          });
+        }
       } else {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('상품 등록 실패 ${response.statusCode}'))
         );
       }
-    } catch(e) {
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('상품 등록 싶패 $e'))
+          SnackBar(content: Text('상품 등록 실패 $e'))
       );
     }
   }
-
-
 
   // 컨트롤러
   final TextEditingController albumNameCtrl = TextEditingController();
@@ -66,8 +163,6 @@ class _MySalesScreenState extends State<MySalesScreen> {
   final TextEditingController barCodeController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
 
-
-
   // 컨트롤러 메모리 해제
   @override
   void dispose() {
@@ -76,25 +171,19 @@ class _MySalesScreenState extends State<MySalesScreen> {
     albumPriceCtrl.dispose();
     albumBarcodeCtrl.dispose();
     albumDescriptionCtrl.dispose();
+    barCodeController.dispose();
+    descriptionController.dispose();
     super.dispose();
   }
 
   // 장르를 담을 리스트
   final List<String> genreList = [
-    'ROCK',
-    'JAZZ',
-    'POP',
-    'HIPHOP',
-    'ELECTRONIC',
-    'CLASSICAL',
-    'RNB_SOUL',
-    'ETC',
+    'ROCK', 'JAZZ', 'POP', 'HIPHOP', 'ELECTRONIC', 'CLASSICAL', 'RNB_SOUL', 'ETC',
   ];
 
   // 장르 선택 확인 트리거
   List<bool> genreState = List.generate(8, (_) => false);
 
-  // 장르 선택 시 나머지를 false로 바꾸는 함수
   void selectGenre(int index) {
     setState(() {
       for (int i = 0; i < genreState.length; i++) {
@@ -109,43 +198,17 @@ class _MySalesScreenState extends State<MySalesScreen> {
 
   // 1. 음반 상태 리스트
   final List<Map<String, String>> conditionInfoList = [
-    {
-      'code': 'SS',
-      'fullName': 'Still Sealed',
-      'description': '미개봉 새상품. 완벽한 상태입니다.',
-    },
-    {
-      'code': 'M',
-      'fullName': 'Mint',
-      'description': '개봉했으나 새것과 다름없는 완벽한 상태입니다.',
-    },
-    {
-      'code': 'NM',
-      'fullName': 'Near Mint',
-      'description': '거의 새것에 가까운 상태로, 미세한 사용감만 있습니다.',
-    },
-    {
-      'code': 'EX',
-      'fullName': 'Excellent',
-      'description': '전체적으로 깨끗하며, 약간의 사용감이 있습니다.',
-    },
-    {
-      'code': 'VG+',
-      'fullName': 'Very Good Plus',
-      'description': '양호한 상태로, 재생에 문제가 없습니다.',
-    },
-    {
-      'code': 'VG',
-      'fullName': 'Very Good',
-      'description': '사용감이 있으나 재생에 큰 문제가 없습니다.',
-    },
+    {'code': 'SS', 'fullName': 'Still Sealed', 'description': '미개봉 새상품. 완벽한 상태입니다.'},
+    {'code': 'M', 'fullName': 'Mint', 'description': '개봉했으나 새것과 다름없는 완벽한 상태입니다.'},
+    {'code': 'NM', 'fullName': 'Near Mint', 'description': '거의 새것에 가까운 상태로, 미세한 사용감만 있습니다.'},
+    {'code': 'EX', 'fullName': 'Excellent', 'description': '전체적으로 깨끗하며, 약간의 사용감이 있습니다.'},
+    {'code': 'VG+', 'fullName': 'Very Good Plus', 'description': '양호한 상태로, 재생에 문제가 없습니다.'},
+    {'code': 'VG', 'fullName': 'Very Good', 'description': '사용감이 있으나 재생에 큰 문제가 없습니다.'},
     {'code': 'G', 'fullName': 'Good', 'description': '사용감이 많으나 재생은 가능합니다.'},
   ];
 
-  // 2. 음반 상태 선택 트리거 리스트
   List<bool> conditionState = List.generate(7, (_) => false);
 
-  // 3. 음반 상태 선택 함수
   void selectCondition(int index) {
     setState(() {
       for (int i = 0; i < conditionState.length; i++) {
@@ -189,6 +252,42 @@ class _MySalesScreenState extends State<MySalesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ✅ [수정 부분] 이미지를 보고 주신 UI와 유사하게 최상단에 위젯 배치
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 200,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E), // 보여주신 이미지 배경색과 비슷하게 설정
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  ),
+                  child: _selectedImage != null
+                      ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(_selectedImage!, fit: BoxFit.cover),
+                  )
+                      : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.image_outlined, color: Colors.white.withValues(alpha: 0.5), size: 48),
+                      const SizedBox(height: 12),
+                      Text(
+                        '상품 이미지를 등록하세요',
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '터치하여 카메라/갤러리 선택',
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
               // 1. 앨범명
               const Text(
                 '앨범명 *',
@@ -340,7 +439,7 @@ class _MySalesScreenState extends State<MySalesScreen> {
 
               const SizedBox(height: 10),
 
-              // 6. 거래 방식 (Wrap을 사용하여 올바르게 렌더링)
+              // 6. 거래 방식
               const Text(
                 '거래 방식 *',
                 style: TextStyle(
@@ -385,7 +484,7 @@ class _MySalesScreenState extends State<MySalesScreen> {
               ),
               const SizedBox(height: 30),
 
-              //바코드 번호 입력 부분
+              // 바코드 번호 입력 부분
               const Text(
                 '바코드 번호 *',
                 style: TextStyle(
@@ -394,13 +493,12 @@ class _MySalesScreenState extends State<MySalesScreen> {
                   color: Colors.white,
                 ),
               ),
-
               _buildNormalTextField(
                   controller: barCodeController,
                   hintText: "바코드 번호(선택)"
               ),
 
-              //상품 설명
+              // 상품 설명
               const Text(
                 '상품 설명 *',
                 style: TextStyle(
@@ -409,8 +507,6 @@ class _MySalesScreenState extends State<MySalesScreen> {
                   color: Colors.white,
                 ),
               ),
-
-              //이 부분의 텍스트 필드는 크기가 크고 순차적으로 입력되도록 하고 있음
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: TextField(
@@ -421,14 +517,10 @@ class _MySalesScreenState extends State<MySalesScreen> {
                   decoration: InputDecoration(
                     hintText: "상품에 대한 상세 설명을 입력하세요",
                     hintStyle: const TextStyle(color: Colors.white38),
-
-                    // 1. 기본 테두리
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
-
-                    // 2. 평소(포커스 x) 상태 테두리
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
@@ -436,21 +528,13 @@ class _MySalesScreenState extends State<MySalesScreen> {
                         width: 1.0,
                       ),
                     ),
-
-                    // 3. 터치/입력 중(포커스 o) 상태 테두리
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        width: 1.5,          // 포커스 시 테두리 두께를 약간 두껍게 설정 가능
-                      ),
+                      borderSide: const BorderSide(width: 1.5),
                     ),
-
-                    // 4. 에러 발생 시 테두리 (선택 사항)
                     errorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Colors.redAccent,
-                      ),
+                      borderSide: const BorderSide(color: Colors.redAccent),
                     ),
                   ),
                 ),
@@ -459,30 +543,26 @@ class _MySalesScreenState extends State<MySalesScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(double.infinity, 50),
-                    backgroundColor: Color(0xFFDAA84D),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadiusGeometry.circular(8)
-                    )
-                  ),
-
+                    style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        backgroundColor: const Color(0xFFDAA84D),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)
+                        )
+                    ),
                     onPressed: () {
-                      //누르면 REst API로 상품 등록을 처리할 로직
-                      //태그 : 상품 삭제 처리 로직
                       submitProduct();
                     },
-                    child: Text(
+                    child: const Text(
                       '등록하기',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black
                       ),
                     )
                 ),
               )
-
             ],
           ),
         ),
