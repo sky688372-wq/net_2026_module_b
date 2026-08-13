@@ -1,19 +1,21 @@
 ## 설명
-안드로이드 앱개발 전국대회 공개 과제 연습 파일
+안드로이드 앱개발 전국대회 공개 과제 연습 파일(모듈 B와 C통합 파일)
 
-## 각 화면 스크린 
+## 변경점
 
-### 1. 로그인 페이지
-<img width="400" height="867" alt="Screen_recording_20260811_111739" src="https://github.com/user-attachments/assets/2d8df107-8666-4516-af3f-c7a45f9d1541" />
+### 1. 메인 화면에 추천 바이닐 기능 추가
+<img width="400" height="867" alt="Screen_recording_20260813_104616" src="https://github.com/user-attachments/assets/bb576a55-e659-478c-bd26-40559ac240b6" />
 
-### 2. 회원 가입 페이지
-<img width="400" height="867" alt="Screen_recording_20260811_110011" src="https://github.com/user-attachments/assets/d440d17c-8f22-4956-a691-482e58f815cc" />
+### 2. 관심 상품 페이지 추가
+<img width="400" height="867" alt="Screen_recording_20260813_105151" src="https://github.com/user-attachments/assets/e193ab3d-d13d-470d-ae9e-7d375ab1fc36" />
 
-### 3. 홈 화면
-<img width="400" height="867" alt="Screen_recording_20260811_110401 (1)" src="https://github.com/user-attachments/assets/357517d8-45a9-4e13-8d16-29822f20372c" />
+### 3. 알림 기능 추가 
+<img width="400" height="867" alt="Screen_recording_20260813_105259" src="https://github.com/user-attachments/assets/2f3ee59b-5dc3-466f-9ea2-1760e84a5e76" />
 
-### 4. 상세페이지
-<img width="400" height="867" alt="Screen_recording_20260811_112100 (2)" src="https://github.com/user-attachments/assets/e609d869-736a-4144-8a15-efbcb0a0daf5" />
+### 4. 바코드 인식 기능 추가(현재 진행 중)
 
-### 5. 검색 화면
-<img width="400" height="867" alt="Screen_recording_20260811_131133" src="https://github.com/user-attachments/assets/354d57d8-c437-41b0-8036-a4487a4bd9ef" />
+### 5. 상품 등록 페이지 추가
+<img width="400" height="867" alt="Screen_recording_20260813_105540" src="https://github.com/user-attachments/assets/c94fa0c9-8396-44c9-8a47-8ecc165724fd" />
+
+### 6. 내가 등록한 상품 목록 기능 추가
+<img width="400" height="867" alt="Screen_recording_20260813_105823" src="https://github.com/user-attachments/assets/81b122d7-79d8-4a82-b651-3bf45a0cad68" />
