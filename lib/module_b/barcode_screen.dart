@@ -23,7 +23,6 @@ class _BarcodeScreenState extends State<BarcodeScreen> {
   @override
   void initState() {
     super.initState();
-    // 네이티브 이벤트 핸들러 등록
     _channel.setMethodCallHandler(_onNative);
     _checkPermission();
   }
@@ -79,54 +78,100 @@ class _BarcodeScreenState extends State<BarcodeScreen> {
     if (_handled) return;
     _handled = true;
 
+    final cleanBarcode = barcode.trim();
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token') ?? "";
-
-      // 1. 서버의 전체 상품 목록 조회
-      final response = await http.get(
-        Uri.parse('https://connexChat-server.onrender.com/vinyl/products'),
-        headers: {
-          "Content-Type": "application/json",
-          if (token.isNotEmpty) "Authorization": "Bearer $token",
-        },
-      );
-
-      if (!mounted) return;
+      final headers = {
+        "Content-Type": "application/json",
+        if (token.isNotEmpty) "Authorization": "Bearer $token",
+      };
 
       int? productId;
 
-      if (response.statusCode == 200) {
-        final parsedJson = jsonDecode(response.body);
-        final rawData = parsedJson['data'];
+      // [시도 1] 백엔드 단독 바코드 검색 API 호출 시도 (?barcode=번호)
+      final searchUri = Uri.parse(
+          'https://connexChat-server.onrender.com/vinyl/products?barcode=$cleanBarcode');
+      final searchResponse = await http.get(searchUri, headers: headers);
 
-        if (rawData is List) {
-          // 2. 바코드 번호(barcode)가 일치하는 상품의 고유 ID 추출
-          final matchedProduct = rawData.firstWhere(
-                (item) => item['barcode']?.toString() == barcode,
-            orElse: () => null,
-          );
+      if (searchResponse.statusCode == 200) {
+        final searchJson = jsonDecode(searchResponse.body);
+        if (searchJson is Map<String, dynamic> && searchJson['id'] != null) {
+          productId = searchJson['id'];
+        } else if (searchJson is List && searchJson.isNotEmpty) {
+          productId = searchJson.first['id'];
+        }
+      }
 
-          if (matchedProduct != null) {
-            productId = matchedProduct['id'];
+      // [시도 2] 단독 API로 못 찾은 경우 전체 목록 조회 후 매칭
+      if (productId == null) {
+        final listUri =
+        Uri.parse('https://connexChat-server.onrender.com/vinyl/products');
+        final response = await http.get(listUri, headers: headers);
+
+        if (response.statusCode == 200) {
+          final parsedJson = jsonDecode(response.body);
+
+          List<dynamic> rawData = [];
+          if (parsedJson is List) {
+            rawData = parsedJson;
+          } else if (parsedJson is Map<String, dynamic>) {
+            rawData = parsedJson['data'] ??
+                parsedJson['content'] ??
+                parsedJson['items'] ??
+                [];
+          }
+
+          if (rawData.isNotEmpty) {
+            final matchedProduct = rawData.firstWhere(
+                  (item) {
+                // 1. barcode 필드 존재 시 비교
+                var rawBarcode = item['barcode'] ??
+                    item['barCode'] ??
+                    item['barcodeNumber'] ??
+                    item['code'];
+
+                if (rawBarcode != null) {
+                  String serverBarcode = rawBarcode is num
+                      ? rawBarcode.toInt().toString()
+                      : rawBarcode.toString().trim();
+                  if (serverBarcode == cleanBarcode) return true;
+                }
+
+                // 2. 바코드 필드가 없는 백엔드 환경에서 스캔 값과 상품 ID 비교 예외 처리
+                if (item['id'] != null) {
+                  String idString = item['id'].toString().trim();
+                  if (idString == cleanBarcode) return true;
+                }
+
+                return false;
+              },
+              orElse: () => null,
+            );
+
+            if (matchedProduct != null) {
+              productId = matchedProduct['id'];
+            }
           }
         }
       }
 
+      if (!mounted) return;
+
       if (productId != null) {
-        // 전달되는 상품 ID 및 바코드 번호를 스낵바로 표시
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '스캔 성공! [바코드: $barcode] -> [전달된 상품 ID: $productId]',
-              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+              '스캔 성공! [바코드: $cleanBarcode] -> [상품 ID: $productId]',
+              style: const TextStyle(
+                  color: Colors.black, fontWeight: FontWeight.bold),
             ),
             backgroundColor: const Color(0xFFDFAC42),
             duration: const Duration(seconds: 3),
           ),
         );
 
-        // DetailScreen으로 이동
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -134,11 +179,12 @@ class _BarcodeScreenState extends State<BarcodeScreen> {
           ),
         );
       } else {
-        _toast('바코드 "$barcode"에 해당하는 등록된 상품이 없습니다.');
+        _toast('바코드 "$cleanBarcode"에 해당하는 등록된 상품이 없습니다.\n(서버 응답 데이터에 barcode 필드 누락)');
         _handled = false;
       }
     } catch (e) {
       _toast('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      print('❌ 에러 발생: $e');
       _handled = false;
     }
   }
@@ -160,7 +206,7 @@ class _BarcodeScreenState extends State<BarcodeScreen> {
           autofocus: true,
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
-            hintText: '바코드 번호',
+            hintText: '바코드 번호 또는 상품 ID 입력',
             hintStyle: TextStyle(color: Colors.white38),
           ),
         ),

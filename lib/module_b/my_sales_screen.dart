@@ -68,7 +68,6 @@ class _MySalesScreenState extends State<MySalesScreen> {
     final url = "https://connexChat-server.onrender.com/vinyl/products?userId=$_userId";
 
     try {
-      // ✅ [수정 부분] 상품 등록 전, 이미지가 선택되었다면 먼저 서버에 업로드
       String finalImageUrl = "https://connexChat-server.onrender.com/vinyl/images/album/default.jpg";
 
       if (_base64Image != null) {
@@ -113,7 +112,7 @@ class _MySalesScreenState extends State<MySalesScreen> {
           'tradeMethod': tradeMethodCodes[tradeIndex],
           'barcode': barCodeController.text,
           'description': descriptionController.text,
-          'albumImage': finalImageUrl, // ✅ [수정 부분] 서버에서 받은 이미지 URL 적용
+          'albumImage': finalImageUrl,
         }),
       );
 
@@ -133,7 +132,6 @@ class _MySalesScreenState extends State<MySalesScreen> {
           albumPriceCtrl.clear();
           barCodeController.clear();
           descriptionController.clear();
-          // ✅ [수정 부분] 성공 시 선택한 이미지도 초기화
           setState(() {
             _selectedImage = null;
             _base64Image = null;
@@ -252,7 +250,6 @@ class _MySalesScreenState extends State<MySalesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ✅ [수정 부분] 이미지를 보고 주신 UI와 유사하게 최상단에 위젯 배치
               GestureDetector(
                 onTap: _pickImage,
                 child: Container(
